@@ -1,37 +1,13 @@
 package frc.robot;
-import java.util.Optional;
 
-import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
-import com.pathplanner.lib.path.PathConstraints;
-import com.pathplanner.lib.path.PathPlannerPath;
-
-
 import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.GenericHID;
-//import edu.wpi.first.networktables.GenericEntry;
-//import edu.wpi.first.math.MathUtil;
-//import edu.wpi.first.networktables.GenericEntry;
-//import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.XboxController.Button;
 import frc.robot.Constants.OIConstants;
 import frc.robot.commands.FieldCentricDrive;
-import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
-import edu.wpi.first.wpilibj2.command.ParallelRaceGroup;
 import edu.wpi.first.wpilibj2.command.Command;
-
-import edu.wpi.first.wpilibj2.command.RunCommand;
-import edu.wpi.first.wpilibj2.command.StartEndCommand;
-
-
-import edu.wpi.first.wpilibj2.command.button.JoystickButton;
-import edu.wpi.first.wpilibj2.command.button.POVButton;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-
 import frc.robot.subsystems.DriveSubsystem;
 
 //import edu.wpi.first.networktables.GenericEntry;
@@ -54,8 +30,14 @@ public class RobotContainer {
         //m_robotDrive.AutonomousBuilder();
         //Subsystem Initialization Functions
         buildPathCommands();
-        PPHolonomicDriveController.setRotationTargetOverride(this::getRotationTargetOverride);
-    
+
+        //This needs to be fixed yet
+        //
+        //
+        PPHolonomicDriveController.overrideRotationFeedback(null);
+        //
+        //
+        
         configureButtonBindings();
         m_robotDrive.calibrateGyro();
         // Configure default commands
