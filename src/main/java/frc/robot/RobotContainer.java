@@ -18,6 +18,7 @@ import edu.wpi.first.wpilibj.GenericHID;
 //import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.XboxController.Button;
 import frc.robot.Constants.OIConstants;
+import frc.robot.commands.FieldCentricDrive;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.ParallelRaceGroup;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -113,28 +114,7 @@ public class RobotContainer {
 
 
     private void buildPathCommands(){
-        //Pathfinding commands, going to 3 set points. Prep for shooting a note from defined locations
-        PathPlannerPath path = PathPlannerPath.fromPathFile("Cent");
-
-        PathConstraints constraints = new PathConstraints(2, 2, Units.degreesToRadians(360), Units.degreesToRadians(360));
-    
-        centerPathCommand = AutoBuilder.pathfindThenFollowPath(path, constraints, 0.0);
-
         
-        //####End of Orig Commands
-
-        
-        //PathPlannerPath SpeakerPath = PathPlannerPath.fromPathFile("Shoot - At Speaker");
-        //speakerPathCommand = AutoBuilder.pathfindThenFollowPath(SpeakerPath, constraints, 0.0);
-        PathPlannerPath StageBottomPath = PathPlannerPath.fromPathFile("B");
-        stageBottomPathCommand = AutoBuilder.pathfindThenFollowPath(StageBottomPath, constraints, 0.0);
-        PathPlannerPath StageMiddlePath = PathPlannerPath.fromPathFile("Y");
-        stageMiddleCommand = AutoBuilder.pathfindThenFollowPath(StageMiddlePath, constraints, 0.0);
-        PathPlannerPath StageTopPath = PathPlannerPath.fromPathFile("X");
-        stageTopPathCommand = AutoBuilder.pathfindThenFollowPath(StageTopPath, constraints, 0.0);
-        PathPlannerPath AmpPath = PathPlannerPath.fromPathFile("RB");
-        AmpPathCommand = AutoBuilder.pathfindThenFollowPath(AmpPath, constraints, 0.0);
-
     }
     
     
@@ -147,17 +127,4 @@ public class RobotContainer {
     return m_chooser.getSelected();
     }
 
-    Rotation2d speakerRotation = new Rotation2d(m_robotDrive.vision.LocationToSpeaker()[0], m_robotDrive.vision.LocationToSpeaker()[1]);
-    
-
-  //public Optional<Rotation2d> getRotationTargetOverride(){
-    // Some condition that should decide if we want to override rotation
-    //if(m_robotDrive.vision.Found7() && m_intakeSubsystem.sensor()) {
-        // Return an optional containing the rotation override (this should be a field relative rotation)
-        //return Optional.of(speakerRotation);
-    //} else {
-        // return an empty optional when we don't want to override the path's rotation
-    //    return Optional.empty();
-    //}
-    //}
 }
