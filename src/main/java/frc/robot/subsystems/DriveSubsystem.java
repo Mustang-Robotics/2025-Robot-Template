@@ -22,6 +22,7 @@ import edu.wpi.first.util.WPIUtilJNI;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
 import edu.wpi.first.wpilibj.DriverStation;
+import frc.robot.Configs;
 import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.FieldPositionConstants;
 import frc.utils.SwerveUtils;
@@ -31,9 +32,10 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
-import com.pathplanner.lib.util.PIDConstants;
-import com.pathplanner.lib.util.ReplanningConfig;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.config.RobotConfig;
+
 
 
 
@@ -92,11 +94,37 @@ public class DriveSubsystem extends SubsystemBase {
 
   /** Creates a new DriveSubsystem. */
   public DriveSubsystem() {
-    AutonomousBuilder();
     allianceColor.setDefaultOption("Red", "Red");
     allianceColor.addOption("Blue", "Blue");
     SmartDashboard.putData("Alliance Color", allianceColor);
     
+    RobotConfig config;
+    try{
+      config = RobotConfig.fromGUISettings();
+    } catch (Exception e) {
+      //Handle exception as needed
+      e.printStackTrace();
+    }
+    
+    AutoBuilder.configure(
+    this::getPose, // Robot pose supplier
+    this::resetOdometry, // Method to reset odometry (will be called if your auto has a starting pose)
+    this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
+    (speeds, feedforwards) -> driveRobotRelative(speeds), // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
+    new PPHolonomicDriveController( // HolonomicPathFollowerConfig, this should likely live in your Constants class
+        new PIDConstants(5, 0.0, 0.0), // Translation PID constants
+        new PIDConstants(5, 0, 0.0) // Rotation PID constants
+    ),
+    config,
+    () -> {
+      var alliance = DriverStation.getAlliance();
+      if(alliance.isPresent()) {
+        return alliance.get() == DriverStation.Alliance.Red;
+      }
+      return false;
+    },
+    this // Reference to this subsystem to set requirements
+  );
   }
 
   //private final Field2d dash_pose = new Field2d();
@@ -364,31 +392,5 @@ public class DriveSubsystem extends SubsystemBase {
   public void calibrateGyro(){
     m_gyro.calibrate();
   }
-
-  public void AutonomousBuilder(){
-    AutoBuilder.configureHolonomic(
-    this::getPose, // Robot pose supplier
-    this::resetOdometry, // Method to reset odometry (will be called if your auto has a starting pose)
-    this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
-    this::driveRobotRelative, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
-    new HolonomicPathFollowerConfig( // HolonomicPathFollowerConfig, this should likely live in your Constants class
-        new PIDConstants(5, 0.0, 0.0), // Translation PID constants
-        new PIDConstants(5, 0, 0.0), // Rotation PID constants
-        4.8, // Max module speed, in m/s
-        0.44, // Drive base radius in meters. Distance from robot center to furthest module.
-        new ReplanningConfig() // Default path replanning config. See the API for the options here
-    ),
-    () -> {
-      var alliance = DriverStation.getAlliance();
-      if(alliance.isPresent()) {
-        return alliance.get() == DriverStation.Alliance.Red;
-      }
-      return false;
-    },
-    this // Reference to this subsystem to set requirements
-  );
-  }
-
-  
 
 }
