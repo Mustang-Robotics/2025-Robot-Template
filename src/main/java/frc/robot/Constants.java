@@ -5,6 +5,8 @@
 //SUMMARY NOTES: Declares the constants relating to the entire robot
 package frc.robot;
 
+import com.pathplanner.lib.config.RobotConfig;
+
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.Matrix;
@@ -14,7 +16,6 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
@@ -34,6 +35,7 @@ import edu.wpi.first.math.util.Units;
  * constants are needed, to reduce verbosity.
  */
 public final class Constants {
+  
   public static final class DriveConstants {
     // Driving Parameters - Note that these are not the maximum capable speeds of
     // the robot, rather the allowed maximum speeds
@@ -142,22 +144,13 @@ public final class Constants {
     // Constraint for the motion profiled robot angle controller
     public static final TrapezoidProfile.Constraints kThetaControllerConstraints = new TrapezoidProfile.Constraints(
         kMaxAngularSpeedRadiansPerSecond, kMaxAngularSpeedRadiansPerSecondSquared);
+
   }
 
   public static final class NeoMotorConstants {
     public static final double kFreeSpeedRpm = 5676;
   }
-  public static class Arm {
-    public static final InterpolatingDoubleTreeMap goal = new InterpolatingDoubleTreeMap();
-    static{
-      goal.put(1.176, 38.0);
-      goal.put(1.798, 47.0);
-      goal.put(2.464, 54.0);
-      goal.put(2.835, 56.0);
-      goal.put(3.323, 60.0);
-      goal.put(3.862, 61.0);
-    }
-  }
+  
   public static class Vision {
         public static final String kCameraName = "Arducam_OV9281_USB_Camera";
         public static final String objectCamera = "USB_Camera";
@@ -167,7 +160,7 @@ public final class Constants {
 
         // The layout of the AprilTags on the field
         public static final AprilTagFieldLayout kTagLayout =
-                AprilTagFieldLayout.loadField(kDefaultField);
+                AprilTagFieldLayout.loadField(AprilTagFields.k2024Crescendo);
         
 
         // The standard deviations of our vision estimated poses, which affect correction rate
@@ -205,5 +198,18 @@ public final class Constants {
           (Max height - Min height(82.9 - 78.13 = 4.77 / 2 = 2.385 + 78.13 = 80.498 middle shoot height.) - april height = (80.498 - 57.13 = 23.368)) 
           ]
       */            
+    }
+
+    public class AutoConfig {
+      public static RobotConfig config;
+      static {
+      try{
+        config = RobotConfig.fromGUISettings();
+      } catch (Exception e) {
+        //Handle exception as needed
+        e.printStackTrace();
+      }
+    }
+      
     }
 }

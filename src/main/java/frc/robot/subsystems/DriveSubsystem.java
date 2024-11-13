@@ -22,7 +22,7 @@ import edu.wpi.first.util.WPIUtilJNI;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
 import edu.wpi.first.wpilibj.DriverStation;
-import frc.robot.Configs;
+
 import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.FieldPositionConstants;
 import frc.utils.SwerveUtils;
@@ -30,11 +30,11 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-
+import frc.robot.Constants.AutoConfig;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.config.PIDConstants;
-import com.pathplanner.lib.config.RobotConfig;
+
 
 
 
@@ -97,15 +97,7 @@ public class DriveSubsystem extends SubsystemBase {
     allianceColor.setDefaultOption("Red", "Red");
     allianceColor.addOption("Blue", "Blue");
     SmartDashboard.putData("Alliance Color", allianceColor);
-    
-    RobotConfig config;
-    try{
-      config = RobotConfig.fromGUISettings();
-    } catch (Exception e) {
-      //Handle exception as needed
-      e.printStackTrace();
-    }
-    
+
     AutoBuilder.configure(
     this::getPose, // Robot pose supplier
     this::resetOdometry, // Method to reset odometry (will be called if your auto has a starting pose)
@@ -115,7 +107,7 @@ public class DriveSubsystem extends SubsystemBase {
         new PIDConstants(5, 0.0, 0.0), // Translation PID constants
         new PIDConstants(5, 0, 0.0) // Rotation PID constants
     ),
-    config,
+    AutoConfig.config,
     () -> {
       var alliance = DriverStation.getAlliance();
       if(alliance.isPresent()) {
@@ -159,10 +151,9 @@ public class DriveSubsystem extends SubsystemBase {
     var visionEst = vision.getEstimatedGlobalPose();
     visionEst.ifPresent(
       est -> {
-        var estPose = est.estimatedPose.toPose2d();
-        var estStdDevs = vision.getEstimationStdDevs(estPose);
+        var estStdDevs = vision.getEstimationStdDevs();
 
-                    m_odometry.addVisionMeasurement(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
+        m_odometry.addVisionMeasurement(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
     });
   }
 
