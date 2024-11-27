@@ -146,6 +146,7 @@ public class DriveSubsystem extends SubsystemBase {
    * @param rotation  set rotation in degrees of the robot
   */
   public void SetRobotPose(double x, double y, double rotation) {
+    //Blue to Red Switch not functioning
     //var alliance = DriverStation.getAlliance();
       //if(alliance.isPresent()) {
         //if(alliance.get() == DriverStation.Alliance.Red){
