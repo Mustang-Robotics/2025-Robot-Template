@@ -18,17 +18,15 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.util.WPIUtilJNI;
-//import edu.wpi.first.wpilibj.ADIS16448_IMU;
 //import edu.wpi.first.wpilibj.ADIS16470_IMU;
-//import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
+import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.Constants.DriveConstants;
 import frc.utils.SwerveUtils;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import frc.robot.Constants.AutoConfig;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
@@ -62,9 +60,9 @@ public class DriveSubsystem extends SubsystemBase {
       DriveConstants.kRearRightTurningCanId,
       DriveConstants.kBackRightChassisAngularOffset);
 
-  // The gyro sensor
-  private final ADXRS450_Gyro m_gyro = new ADXRS450_Gyro();
-  //private final ADIS16448_IMU m_gyro = new ADIS16448_IMU();
+  // The IMU sensor, used for rotation/acceleration of robot
+  //private final ADIS16470_IMU m_IMU = new ADIS16470_IMU();
+  private final ADXRS450_Gyro m_IMU = new ADXRS450_Gyro();
 
   // Slew rate filter variables for controlling lateral acceleration
   private double m_currentRotation = 0.0;
@@ -77,12 +75,11 @@ public class DriveSubsystem extends SubsystemBase {
 
   // Odometry class for tracking robot pose
   public final Field2d m_pose = new Field2d();
-  public final Field2d n_pose = new Field2d(); //current robot position on the field
   public Pose2d initialPosition = new Pose2d();
   public Vision vision = new Vision();
   SwerveDrivePoseEstimator m_odometry = new SwerveDrivePoseEstimator(
       DriveConstants.kDriveKinematics,
-      Rotation2d.fromDegrees(-m_gyro.getAngle()),
+      Rotation2d.fromDegrees(-m_IMU.getAngle()),
       new SwerveModulePosition[] {
           m_frontLeft.getPosition(),
           m_frontRight.getPosition(),
@@ -90,14 +87,10 @@ public class DriveSubsystem extends SubsystemBase {
           m_rearRight.getPosition()
       },initialPosition);
   
-  public SendableChooser<String> allianceColor = new SendableChooser<>();
 
   /** Creates a new DriveSubsystem. */
   public DriveSubsystem() {
-    allianceColor.setDefaultOption("Red", "Red");
-    allianceColor.addOption("Blue", "Blue");
-    SmartDashboard.putData("Alliance Color", allianceColor);
-
+    //AutoBuilder for PathPlanner
     AutoBuilder.configure(
     this::getPose, // Robot pose supplier
     this::resetOdometry, // Method to reset odometry (will be called if your auto has a starting pose)
@@ -119,29 +112,19 @@ public class DriveSubsystem extends SubsystemBase {
   );
   }
 
-  //private final Field2d dash_pose = new Field2d();
-
   @Override
   public void periodic() {
-    // Update the odometry in the periodic block
+    //Update the odometry in the periodic block
     //Periodic methods are called every 20 ms by default (The basic update method)
-    SmartDashboard.putNumber("angle", -m_gyro.getAngle());
-    m_pose.setRobotPose(m_odometry.getEstimatedPosition());
-    /*if(allianceColor.getSelected() == "Red"){
-      //Update the robot's pos to the code identified in the field.
-      Pose2d n_pose = m_pose.getRobotPose();
-      Translation2d translate = new Translation2d(16.5 - n_pose.getX(), 8 - n_pose.getY());
-      Rotation2d rotation = new Rotation2d();
-      rotation = n_pose.getRotation().plus(Rotation2d.fromDegrees(180));
-      Pose2d dash_poseP = new Pose2d(translate, rotation);
-      dash_pose.setRobotPose(dash_poseP);
-      SmartDashboard.putData("pose", dash_pose);
-    }else{*/
-      SmartDashboard.putData("pose", m_pose);
-    //}
     
+    //Publishes current gyro angle to SmartDashboard, useful for checking for gyro error
+    SmartDashboard.putNumber("angle", -m_IMU.getAngle());
+
+    //Deals with robot pose - publishes to dashboard and incorporates vision into position
+    m_pose.setRobotPose(m_odometry.getEstimatedPosition());
+    SmartDashboard.putData("pose", m_pose);
     m_odometry.update(
-        Rotation2d.fromDegrees(-m_gyro.getAngle()),
+        Rotation2d.fromDegrees(-m_IMU.getAngle()),
         new SwerveModulePosition[] {
             m_frontLeft.getPosition(),
             m_frontRight.getPosition(),
@@ -149,42 +132,31 @@ public class DriveSubsystem extends SubsystemBase {
             m_rearRight.getPosition()
     });
     var visionEst = vision.getEstimatedGlobalPose();
-    
     visionEst.ifPresent(
       est -> {
         var estStdDevs = vision.getEstimationStdDevs();
-        n_pose.setRobotPose(est.estimatedPose.toPose2d());
-        SmartDashboard.putData("vision", n_pose);
         m_odometry.addVisionMeasurement(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
     });
   }
 
-  public Pose2d GetCurrentRobotPose() { //eventually switch to getPose()
-    //GetCurrentRobotPose().getX(); //Example: Robot x
-    return m_odometry.getEstimatedPosition();
+  /**Could be used as a command in Pathplanner to set approximate initial position of robot 
+   * 
+   * @param x         set x position in meters of the robot (width of field)
+   * @param y         set y position in meters of the robot (length of field)
+   * @param rotation  set rotation in degrees of the robot
+  */
+  public void SetRobotPose(double x, double y, double rotation) {
+    //var alliance = DriverStation.getAlliance();
+      //if(alliance.isPresent()) {
+        //if(alliance.get() == DriverStation.Alliance.Red){
+          //x = 8.1 - x;
+          //y = 16.48 - y;
+        //}
+      //}
+    m_odometry.resetTranslation(new Translation2d(x,y));
+    m_odometry.resetRotation(new Rotation2d(rotation));
   }
 
-  public void SetRobotPose(double angle) {
-    m_pose.setRobotPose(new Pose2d(new Translation2d(0,0), new Rotation2d(angle)));
-  }
-
-  /* 
-  public double ReturnRobotAngleFromTargetPositon() {
-    var a = GetCurrentRobotPose().getX(); //Robot x
-    var b = GetCurrentRobotPose().getY(); //Robot y
-    var f = FieldPositionConstants.speakerPose.getX(); //speaker x
-    var g = FieldPositionConstants.speakerPose.getY(); //Speaker Y
-    var d = Math.abs(b - g);
-    var h = Math.abs(a - f);
-    var j = Math.atan(h / d);
-    var c = 180 + j; //Robot Desired Angle
-    //var p = (b - g) / (a - f) robot heading line slope
-    //y - b = p(x - a)
-    return c;
-  }*/
-    
-  
- 
   /**
    * Returns the currently-estimated pose of the robot.
    *
@@ -201,7 +173,7 @@ public class DriveSubsystem extends SubsystemBase {
    */
   public void resetOdometry(Pose2d pose) {
     m_odometry.resetPosition(
-        Rotation2d.fromDegrees(-m_gyro.getAngle()),
+        Rotation2d.fromDegrees(-m_IMU.getAngle()),
         new SwerveModulePosition[] {
             m_frontLeft.getPosition(),
             m_frontRight.getPosition(),
@@ -221,10 +193,16 @@ public class DriveSubsystem extends SubsystemBase {
    *                      field.
    * @param rateLimit     Whether to enable rate limiting for smoother control.
    */
-  public void drive(double xSpeed, double ySpeed, double rot, boolean fieldRelative, boolean rateLimit, boolean flip) {
+  public void drive(double xSpeed, double ySpeed, double rot, boolean fieldRelative, boolean rateLimit) {
     
-    if(flip){
-      if(allianceColor.getSelected() == "Red"){
+    //Change direction based on alliance color, only used for april tags and field relative motion
+    if(fieldRelative){
+      var alliance = DriverStation.getAlliance();
+      boolean red = false;
+      if(alliance.isPresent()) {
+        red = alliance.get() == DriverStation.Alliance.Red;
+      }
+      if(red){
         xSpeed = -xSpeed;
         ySpeed = -ySpeed;
       }
@@ -232,6 +210,10 @@ public class DriveSubsystem extends SubsystemBase {
     double xSpeedCommanded;
     double ySpeedCommanded;
 
+    //fancy math that makes driving smoother, change slew rate in constants to adjust
+    //Newer version of MaxSwerve does not have this
+    //Was implemented to save their original wheels
+    //We can play around with this to see if we'd like to remove
     if (rateLimit) {
       // Convert XY to polar for rate limiting
       double inputTranslationDir = Math.atan2(ySpeed, xSpeed);
@@ -287,7 +269,7 @@ public class DriveSubsystem extends SubsystemBase {
 
     var swerveModuleStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(
         fieldRelative
-            ? ChassisSpeeds.fromRobotRelativeSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered, m_odometry.getEstimatedPosition().getRotation())//m_odometry.getEstimatedPosition().getRotation())//m_odometry.visionRobotPoseMeters.getRotation())))//m_gyro.getAngle(IMUAxis.kZ))) //This one Rotation2d.fromDegrees(m_gyro.getAngle(IMUAxis.kZ)
+            ? ChassisSpeeds.fromRobotRelativeSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered, m_odometry.getEstimatedPosition().getRotation())//m_odometry.getEstimatedPosition().getRotation())//m_odometry.visionRobotPoseMeters.getRotation())))//m_IMU.getAngle(IMUAxis.kZ))) //This one Rotation2d.fromDegrees(m_IMU.getAngle(IMUAxis.kZ)
             : new ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered));
     SwerveDriveKinematics.desaturateWheelSpeeds(
         swerveModuleStates, DriveConstants.kMaxSpeedMetersPerSecond);
@@ -322,6 +304,7 @@ public class DriveSubsystem extends SubsystemBase {
     m_rearRight.setDesiredState(desiredStates[3]);
   }
 
+  /**Gives Swerve module states for use in PathPlanner */
   public SwerveModuleState[] getStates() {
     return new SwerveModuleState[] {
       m_frontLeft.getState(),
@@ -329,19 +312,19 @@ public class DriveSubsystem extends SubsystemBase {
       m_rearLeft.getState(),
       m_rearRight.getState()
     };
-    
-    
   }
+
+  /**Used to drive the robot in robot relative orientation for use in PathPlanner */
   public void driveRobotRelative(ChassisSpeeds speeds) {
     var targetStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(speeds);
     SwerveDriveKinematics.desaturateWheelSpeeds(targetStates, DriveConstants.kMaxSpeedMetersPerSecond);
     setModuleStates(targetStates);
   }
 
+  /**Returns Robot Relative Speeds for use in PathPlanner */
   public ChassisSpeeds getRobotRelativeSpeeds(){
     return DriveConstants.kDriveKinematics.toChassisSpeeds(getStates());
   }
-
 
   /** Resets the drive encoders to currently read a position of 0. */
   public void resetEncoders() {
@@ -352,8 +335,8 @@ public class DriveSubsystem extends SubsystemBase {
   }
 
   /** Zeroes the heading of the robot. */
-  public void zeroHeading() {
-    m_gyro.reset();
+  public Command zeroHeading() {
+    return this.runOnce(() -> m_IMU.reset());
   }
 
   /**
@@ -362,7 +345,7 @@ public class DriveSubsystem extends SubsystemBase {
    * @return the robot's heading in degrees, from -180 to 180
    */
   public double getHeading() {
-    return Rotation2d.fromDegrees(-m_gyro.getAngle()).getDegrees();
+    return Rotation2d.fromDegrees(-m_IMU.getAngle()).getDegrees();
   }
 
   /**
@@ -371,10 +354,12 @@ public class DriveSubsystem extends SubsystemBase {
    * @return The turn rate of the robot, in degrees per second
    */
   public double getTurnRate() {
-    return -m_gyro.getRate() * (DriveConstants.kGyroReversed ? -1.0 : 1.0);
+    return -m_IMU.getRate() * (DriveConstants.kGyroReversed ? -1.0 : 1.0);
   }
+
+  /**Initializes the Gyro */
   public void calibrateGyro(){
-    m_gyro.calibrate();
+    m_IMU.calibrate();
   }
 
 }

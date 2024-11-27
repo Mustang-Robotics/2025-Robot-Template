@@ -6,11 +6,11 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants.OIConstants;
 import frc.robot.subsystems.DriveSubsystem;
 
-public class FieldCentricDrive extends Command{
+public class RobotCentricDrive extends Command{
     DriveSubsystem m_drive;
     GenericHID m_controller;
 
-    public FieldCentricDrive(DriveSubsystem drive, GenericHID controller){
+    public RobotCentricDrive(DriveSubsystem drive, GenericHID controller){
         m_drive = drive;
         m_controller = controller;
 
@@ -23,7 +23,7 @@ public class FieldCentricDrive extends Command{
                     -MathUtil.applyDeadband(m_controller.getRawAxis(1), OIConstants.kDriveDeadband),
                     -MathUtil.applyDeadband(m_controller.getRawAxis(0), OIConstants.kDriveDeadband),
                     -MathUtil.applyDeadband(m_controller.getRawAxis(4), OIConstants.kDriveDeadband),
-                true, true);
+                false, true);
     }
 
     @Override
