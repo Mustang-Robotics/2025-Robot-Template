@@ -19,12 +19,11 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.util.WPIUtilJNI;
 //import edu.wpi.first.wpilibj.ADIS16448_IMU;
-import edu.wpi.first.wpilibj.ADIS16470_IMU;
-import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
+//import edu.wpi.first.wpilibj.ADIS16470_IMU;
+//import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
 import edu.wpi.first.wpilibj.DriverStation;
-
+import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import frc.robot.Constants.DriveConstants;
-import frc.robot.Constants.FieldPositionConstants;
 import frc.utils.SwerveUtils;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -64,7 +63,7 @@ public class DriveSubsystem extends SubsystemBase {
       DriveConstants.kBackRightChassisAngularOffset);
 
   // The gyro sensor
-  private final ADIS16470_IMU m_gyro = new ADIS16470_IMU();
+  private final ADXRS450_Gyro m_gyro = new ADXRS450_Gyro();
   //private final ADIS16448_IMU m_gyro = new ADIS16448_IMU();
 
   // Slew rate filter variables for controlling lateral acceleration
@@ -77,12 +76,13 @@ public class DriveSubsystem extends SubsystemBase {
   private double m_prevTime = WPIUtilJNI.now() * 1e-6;
 
   // Odometry class for tracking robot pose
-  public final Field2d m_pose = new Field2d(); //current robot position on the field
+  public final Field2d m_pose = new Field2d();
+  public final Field2d n_pose = new Field2d(); //current robot position on the field
   public Pose2d initialPosition = new Pose2d();
   public Vision vision = new Vision();
   SwerveDrivePoseEstimator m_odometry = new SwerveDrivePoseEstimator(
       DriveConstants.kDriveKinematics,
-      Rotation2d.fromDegrees(m_gyro.getAngle(IMUAxis.kZ)),
+      Rotation2d.fromDegrees(-m_gyro.getAngle()),
       new SwerveModulePosition[] {
           m_frontLeft.getPosition(),
           m_frontRight.getPosition(),
@@ -125,7 +125,7 @@ public class DriveSubsystem extends SubsystemBase {
   public void periodic() {
     // Update the odometry in the periodic block
     //Periodic methods are called every 20 ms by default (The basic update method)
-    SmartDashboard.putNumber("angle", m_gyro.getAngle(IMUAxis.kZ));
+    SmartDashboard.putNumber("angle", -m_gyro.getAngle());
     m_pose.setRobotPose(m_odometry.getEstimatedPosition());
     /*if(allianceColor.getSelected() == "Red"){
       //Update the robot's pos to the code identified in the field.
@@ -141,7 +141,7 @@ public class DriveSubsystem extends SubsystemBase {
     //}
     
     m_odometry.update(
-        Rotation2d.fromDegrees(m_gyro.getAngle(IMUAxis.kZ)),
+        Rotation2d.fromDegrees(-m_gyro.getAngle()),
         new SwerveModulePosition[] {
             m_frontLeft.getPosition(),
             m_frontRight.getPosition(),
@@ -149,10 +149,12 @@ public class DriveSubsystem extends SubsystemBase {
             m_rearRight.getPosition()
     });
     var visionEst = vision.getEstimatedGlobalPose();
+    
     visionEst.ifPresent(
       est -> {
         var estStdDevs = vision.getEstimationStdDevs();
-
+        n_pose.setRobotPose(est.estimatedPose.toPose2d());
+        SmartDashboard.putData("vision", n_pose);
         m_odometry.addVisionMeasurement(est.estimatedPose.toPose2d(), est.timestampSeconds, estStdDevs);
     });
   }
@@ -164,15 +166,6 @@ public class DriveSubsystem extends SubsystemBase {
 
   public void SetRobotPose(double angle) {
     m_pose.setRobotPose(new Pose2d(new Translation2d(0,0), new Rotation2d(angle)));
-  }
-
-  public double CalcCornerShoot() {
-    var currentPos = m_odometry.getEstimatedPosition();
-    var cornerPos = FieldPositionConstants.ampCornerPos;
-    var hyp = Math.sqrt(Math.pow((currentPos.getX() - cornerPos.getX()), 2) + Math.pow((currentPos.getY() - cornerPos.getY()), 2));
-    var opp = Math.abs(cornerPos.getX() - currentPos.getX());
-    var shootAngle = Math.asin(opp * Math.sin(90)/hyp);
-    return shootAngle;
   }
 
   /* 
@@ -208,7 +201,7 @@ public class DriveSubsystem extends SubsystemBase {
    */
   public void resetOdometry(Pose2d pose) {
     m_odometry.resetPosition(
-        Rotation2d.fromDegrees(m_gyro.getAngle(IMUAxis.kZ)),
+        Rotation2d.fromDegrees(-m_gyro.getAngle()),
         new SwerveModulePosition[] {
             m_frontLeft.getPosition(),
             m_frontRight.getPosition(),
@@ -369,7 +362,7 @@ public class DriveSubsystem extends SubsystemBase {
    * @return the robot's heading in degrees, from -180 to 180
    */
   public double getHeading() {
-    return Rotation2d.fromDegrees(m_gyro.getAngle(IMUAxis.kZ)).getDegrees();
+    return Rotation2d.fromDegrees(-m_gyro.getAngle()).getDegrees();
   }
 
   /**
@@ -378,7 +371,7 @@ public class DriveSubsystem extends SubsystemBase {
    * @return The turn rate of the robot, in degrees per second
    */
   public double getTurnRate() {
-    return m_gyro.getRate(IMUAxis.kZ) * (DriveConstants.kGyroReversed ? -1.0 : 1.0);
+    return -m_gyro.getRate() * (DriveConstants.kGyroReversed ? -1.0 : 1.0);
   }
   public void calibrateGyro(){
     m_gyro.calibrate();
