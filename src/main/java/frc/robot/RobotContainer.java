@@ -1,5 +1,6 @@
 package frc.robot;
 
+import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.GenericHID;
@@ -7,6 +8,7 @@ import frc.robot.Constants.OIConstants;
 import frc.robot.commands.FieldCentricDrive;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 //import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.subsystems.DriveSubsystem;
 
@@ -17,20 +19,14 @@ public class RobotContainer {
     //XboxController m_driverController = new XboxController(OIConstants.kDriverControllerPort);
     //XboxController m_operatorController = new XboxController(OIConstants.kOperatorControllerPort);
     private final DriveSubsystem m_robotDrive = new DriveSubsystem();
-    SendableChooser<Command> m_chooser;
-    public Command centerPathCommand;
-    public Command speakerPathCommand;
-    public Command stageBottomPathCommand;
-    public Command stageMiddleCommand;
-    public Command stageTopPathCommand;
-    public Command AmpPathCommand;
+    private final SendableChooser<Command> m_chooser;
+
     PIDController followPID = new PIDController(.02, 0, 0);
 
     public RobotContainer() {// Configure the button bindings
         //m_robotDrive.AutonomousBuilder();
         //Subsystem Initialization Functions
-        buildPathCommands();
-
+        m_chooser = AutoBuilder.buildAutoChooser();
         //This needs to be fixed yet
         //
         //
@@ -56,7 +52,7 @@ public class RobotContainer {
 
         //Efficient Commands
         
-        //SmartDashboard.putData("Auto Chooser", m_chooser);
+        SmartDashboard.putData("Auto Chooser", m_chooser);
         
     }
     
@@ -92,14 +88,7 @@ public class RobotContainer {
     //private GenericEntry PID_kp = m_arm.tab.add("PID_kp", 0.5).getEntry();
     //private GenericEntry PID_ki = m_arm.tab.add("PID_ki", 0.5).getEntry();
     //private GenericEntry PID_kd = m_arm.tab.add("PID_kd", 0).getEntry();
-
-
-
-    private void buildPathCommands(){
-        
-    }
-    
-    
+   
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
    *
